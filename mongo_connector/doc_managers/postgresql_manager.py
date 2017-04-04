@@ -197,19 +197,30 @@ class DocManager(DocManagerBase):
             sql_bulk_insert(cursor, self.mappings, namespace, document_buffer)
             self.commit()
 
+    def delete_from_array_field(self, document_id, db, collection):
+        """
+        Delete all rows related to a document from imbricated tables  
+        :param document_id: 
+        :param db: 
+        :param collection: 
+        :return: 
+        """
+
+        for field in self.mappings[db][collection].keys():
+            field_type = self.mappings[db][collection][field]['type']
+            if field_type == ARRAY_TYPE or field_type == ARRAY_OF_SCALARS_TYPE:
+                dest = self.mappings[db][collection][field]['dest']
+                pk = self.mappings[db][dest]['pk']
+                sql_delete_rows_where(self.pgsql.cursor(), dest,
+                                      "{0} LIKE  '{1}\_%'".format(pk, to_sql_value(document_id)))
+
     def update(self, document_id, update_spec, namespace, timestamp):
         db, collection = db_and_collection(namespace)
         updated_document = self.get_document_by_id(db, collection, document_id)
-
         if updated_document is None:
             return
 
-        for arrayField in get_any_array_fields(self.mappings, db, collection, updated_document):
-            dest = self.mappings[db][collection][arrayField]['dest']
-            fk = self.mappings[db][collection][arrayField]['fk']
-            sql_delete_rows_where(self.pgsql.cursor(), dest,
-                                  "{0} = {1}".format(fk, to_sql_value(document_id)))
-
+        self.delete_from_array_field(document_id, db, collection)
         self._upsert(namespace,
                      updated_document,
                      self.pgsql.cursor(), timestamp)
@@ -229,7 +240,9 @@ class DocManager(DocManagerBase):
             cursor.execute(
                 "DELETE from {0} WHERE {1} = '{2}';".format(collection.lower(), primary_key, str(document_id))
             )
+            self.delete_from_array_field(document_id, db, collection)
             self.commit()
+            LOG.info('Document with id {} from collection {} deleted', document_id, collection)
 
     def search(self, start_ts, end_ts):
         pass
@@ -248,6 +261,7 @@ class DocManager(DocManagerBase):
         for db in self.mappings:
             for collection in self.mappings[db]:
                 for field in self.mappings[db][collection]:
+                    # Exclude pk field (?? if this is the case, test field != 'pk' would be more explicit)
                     if isinstance(self.mappings[db][collection][field], dict):
                         if 'dest' not in self.mappings[db][collection][field]:
                             self.mappings[db][collection][field]['dest'] = field
