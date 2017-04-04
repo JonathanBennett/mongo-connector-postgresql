@@ -87,7 +87,8 @@ class DocManager(DocManagerBase):
                                 indices.append(u"INDEX idx_{2}_{0} ON {1} ({0})".format(name, collection, collection.replace('.', '_')))
 
                     if not pk_found:
-                        columns.append(pk_name + ' SERIAL CONSTRAINT ' + collection.upper() + '_PK PRIMARY KEY')
+                        constraints = "CONSTRAINT {0}_PK PRIMARY KEY".format(collection.upper())
+                        columns.append(pk_name + ' TEXT ' + constraints)
 
                     if sql_table_exists(cursor, collection):
                         sql_drop_table(cursor, collection)

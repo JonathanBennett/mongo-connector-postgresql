@@ -55,15 +55,25 @@ def sql_bulk_insert(cursor, mappings, namespace, documents):
     db, collection = db_and_collection(namespace)
 
     primary_key = mappings[db][collection]['pk']
-    keys = [
-        v['dest'] for k, v in mappings[db][collection].iteritems()
-        if 'dest' in v and v['type'] != ARRAY_TYPE
-        and v['type'] != ARRAY_OF_SCALARS_TYPE
-        ]
+    keys = []
+    for k, v in  mappings[db][collection].iteritems():
+        if 'dest' in v and v['type'] != ARRAY_TYPE and v['type'] != ARRAY_OF_SCALARS_TYPE :
+            keys.append(v['dest'])
+
+    # Adding primary_key for imbricated document where they have no 'dest' field
+    if primary_key not in keys:
+        keys.append(primary_key)
+
     values = []
 
     for document in documents:
         mapped_document = get_mapped_document(mappings, document, namespace)
+
+        # Add primary key value generated for imbricated tables
+        pk = mappings[db][collection]['pk']
+        if pk not in mapped_document:
+            mapped_document[pk] = document[pk]
+
         document_values = [to_sql_value(extract_creation_date(mapped_document, mappings[db][collection]['pk']))]
 
         if not mapped_document:
@@ -92,13 +102,21 @@ def insert_scalar_arrays(collection, cursor, db, document, mapped_document, mapp
     for arrayField in get_array_of_scalar_fields(mappings, db, collection, document):
         dest = mappings[db][collection][arrayField]['dest']
         fk = mappings[db][collection][arrayField]['fk']
+        pk = mappings[db][dest]['pk']
         value_field = mappings[db][collection][arrayField]['valueField']
         scalar_values = get_nested_field_from_document(document, arrayField)
 
         linked_documents = []
-        for value in scalar_values:
-            linked_documents.append({fk: mapped_document[primary_key], value_field: value})
 
+        count = 0
+        for value in scalar_values:
+            # Generate automatically primary_key for linked documents
+            linked_pk = str(mapped_document[primary_key]) + '_' + str(count)
+            document = {pk: linked_pk,
+                        fk: mapped_document[primary_key],
+                        value_field: value}
+            count += 1
+            linked_documents.append(document)
         sql_bulk_insert(cursor, mappings, "{0}.{1}".format(db, dest), linked_documents)
 
 
@@ -106,10 +124,15 @@ def insert_document_arrays(collection, cursor, db, document, mapped_document, ma
     for arrayField in get_array_fields(mappings, db, collection, document):
         dest = mappings[db][collection][arrayField]['dest']
         fk = mappings[db][collection][arrayField]['fk']
+        pk = mappings[db][dest]['pk']
         linked_documents = get_nested_field_from_document(document, arrayField)
 
+        count = 0
         for linked_document in linked_documents:
             linked_document[fk] = mapped_document[primary_key]
+            # Generate automatically primary_key for linked documents
+            linked_document[pk] = str(mapped_document[primary_key]) + '_' + str(count)
+            count += 1
 
         sql_bulk_insert(cursor, mappings, "{0}.{1}".format(db, dest), linked_documents)
 
