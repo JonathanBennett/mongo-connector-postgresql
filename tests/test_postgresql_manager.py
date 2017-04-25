@@ -27,7 +27,7 @@ MAPPING_RAW = '''{
         "col_field2": {
             "pk": "_id",
             "_id": {
-                "type": "INT"
+                "type": "TEXT"
             },
             "id_col": {
                 "type": "INT"
@@ -45,10 +45,10 @@ MAPPING_RAW = '''{
         "col_field2_subfield2": {
             "pk": "_id",
             "_id": {
-                "type": "INT"
+                "type": "TEXT"
             },
             "id_col_field2": {
-                "type": "INT"
+                "type": "TEXT"
             },
             "scalar": {
                 "type": "INT"
@@ -79,7 +79,7 @@ MAPPING = {
             'pk': '_id',
             '_id': {
                 'dest': '_id',
-                'type': 'INT'
+                'type': 'TEXT'
             },
             'id_col': {
                 'dest': 'id_col',
@@ -100,11 +100,11 @@ MAPPING = {
             'pk': '_id',
             '_id': {
                 'dest': '_id',
-                'type': 'INT'
+                'type': 'TEXT'
             },
             'id_col_field2': {
                 'dest': 'id_col_field2',
-                'type': 'INT'
+                'type': 'TEXT'
             },
             'scalar': {
                 'dest': 'scalar',
@@ -188,7 +188,10 @@ class TestManagerInitialization(TestPostgreSQLManager):
                 'CREATE TABLE col  (_creationdate TIMESTAMP,_id INT CONSTRAINT COL_PK PRIMARY KEY,field1 TEXT ) '
             ),
             call(
-                'CREATE TABLE col_field2  (_creationdate TIMESTAMP,id_col INT ,_id INT CONSTRAINT COL_FIELD2_PK PRIMARY KEY,subfield1 TEXT ) '
+                'CREATE TABLE col_field2  (_creationdate TIMESTAMP,id_col INT ,_id TEXT CONSTRAINT COL_FIELD2_PK PRIMARY KEY,subfield1 TEXT ) '
+            ),
+            call(
+                'CREATE TABLE col_field2_subfield2  (_creationdate TIMESTAMP,scalar INT ,_id TEXT CONSTRAINT COL_FIELD2_SUBFIELD2_PK PRIMARY KEY,id_col_field2 TEXT ) '
             ),
             call(
                 'CREATE INDEX idx_col__creation_date ON col (_creationdate DESC)'
@@ -288,19 +291,18 @@ class TestManager(TestPostgreSQLManager):
 
         self.docmgr.bulk_upsert([doc1, doc2, doc3], 'db.col', now)
 
-        print(self.cursor.execute.mock_calls)
         self.cursor.execute.assert_has_calls([
             call(
-                "INSERT INTO col_field2 (_creationDate,id_col,_id,subfield1) VALUES (NULL,1,NULL,'subval1')"
+                "INSERT INTO col_field2 (_creationDate,id_col,_id,subfield1) VALUES (NULL,1,'1_0','subval1')"
             ),
             call(
-                "INSERT INTO col_field2 (_creationDate,id_col,_id,subfield1) VALUES (NULL,2,NULL,'subval2')"
+                "INSERT INTO col_field2 (_creationDate,id_col,_id,subfield1) VALUES (NULL,2,'2_0','subval2')"
             ),
             call(
                 "INSERT INTO col (_creationDate,_id,field1) VALUES (NULL,1,'val1'),(NULL,2,'val2')"
             ),
             call(
-                "INSERT INTO col_field2 (_creationDate,id_col,_id,subfield1) VALUES (NULL,3,NULL,'subval3')"
+                "INSERT INTO col_field2 (_creationDate,id_col,_id,subfield1) VALUES (NULL,3,'3_0','subval3')"
             ),
             call(
                 "INSERT INTO col (_creationDate,_id,field1) VALUES (NULL,3,'val3')"
@@ -327,9 +329,10 @@ class TestManager(TestPostgreSQLManager):
         self.mdb.__getitem__.assert_called_with('col')
         self.mcol.find_one.assert_called_with({'_id': 1})
 
+        print(self.cursor.execute.mock_calls)
         self.cursor.execute.assert_has_calls([
             call(
-                'DELETE FROM col_field2 WHERE id_col = 1'
+                'DELETE FROM col_field2 WHERE _id LIKE \'1\\_%\''
             ),
             call(
                 'INSERT INTO col_field2  (id_col,subfield1)  VALUES  (%(id_col)s,%(subfield1)s) ',
@@ -346,9 +349,10 @@ class TestManager(TestPostgreSQLManager):
         now = time()
         self.docmgr.remove(1, 'db.col', now)
 
-        self.cursor.execute.assert_called_with(
-            'DELETE from col WHERE _id = \'1\';'
-        )
+        self.cursor.execute.assert_has_calls([
+            call('DELETE from col WHERE _id = \'1\';'),
+            call('DELETE FROM col_field2 WHERE _id LIKE \'1\\_%\'')
+        ], any_order=True)
         self.pconn.commit.assert_called()
 
 
