@@ -199,20 +199,29 @@ class DocManager(DocManagerBase):
 
     def delete_from_array_field(self, document_id, db, collection):
         """
-        Delete all rows related to a document from imbricated tables  
-        :param document_id: 
-        :param db: 
-        :param collection: 
-        :return: 
+        Delete all rows related to a document from imbricated tables
+        :param document_id:
+        :param db:
+        :param collection:
+        :return:
         """
 
         for field in self.mappings[db][collection].keys():
-            field_type = self.mappings[db][collection][field]['type']
-            if field_type == ARRAY_TYPE or field_type == ARRAY_OF_SCALARS_TYPE:
-                dest = self.mappings[db][collection][field]['dest']
-                pk = self.mappings[db][dest]['pk']
-                sql_delete_rows_where(self.pgsql.cursor(), dest,
-                                      "{0} LIKE  '{1}\_%'".format(pk, to_sql_value(document_id)))
+            if field != 'pk':
+                field_type = self.mappings[db][collection][field]['type']
+
+                if field_type in [ARRAY_TYPE, ARRAY_OF_SCALARS_TYPE]:
+                    dest = self.mappings[db][collection][field]['dest']
+                    pk = self.mappings[db][dest]['pk']
+
+                    sql_delete_rows_where(
+                        self.pgsql.cursor(),
+                        dest,
+                        "{0} LIKE '{1}\_%'".format(
+                            pk,
+                            to_sql_value(document_id)
+                        )
+                    )
 
     def update(self, document_id, update_spec, namespace, timestamp):
         db, collection = db_and_collection(namespace)
