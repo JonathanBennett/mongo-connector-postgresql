@@ -1,3 +1,8 @@
+.. image:: https://travis-ci.org/Hopwork/mongo-connector-postgresql.svg?branch=master  
+.. image:: https://coveralls.io/repos/github/Hopwork/mongo-connector-postgresql/badge.svg?branch=master
+
+`Continuous Integration <https://travis-ci.org/Hopwork/mongo-connector-postgresql>`_ - `Code Coverage <https://coveralls.io/github/Hopwork/mongo-connector-postgresql>`_
+
 mongo-connector-postgresql is used to make the bridge between PostgreSQL and MongoDB.
 It acts as a river from MongoDB to PostgreSQL.
 
@@ -82,6 +87,11 @@ This file should be named mappings.json. Here is a sample :
                 "myobject.subproperty":{
                     "dest":"subproperty",
                     "type":"TEXT"
+                },
+                "transformed_field": {
+                  "dest": "field",
+                  "type": "BOOLEAN",
+                  "transform": "package.module.transform_str_to_bool"
                 }
             }
         }
@@ -94,6 +104,14 @@ Please notice the following :
 - If the original document in mongodb has a embedded document, everything is flattened to be inserted in PostgreSQL
 - One can define indices in two different ways : Using the array ``indices`` and a SQL definition or autogenerate index
  by setting the ``index`` field to true
+- The ``transform`` (if set) points to a function used to transform the field from the Mongo document
+
+Example of transform function:
+
+.. code-block:: python
+
+   def transform_str_to_bool(mongo_val):
+       return (mongo_val in ['true', 'True', 'yes', 'Yes', '1'])
 
 The connector also supports arrays of documents. Let say your Mongo database stores the following documents :
 
