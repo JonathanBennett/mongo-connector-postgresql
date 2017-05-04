@@ -113,7 +113,7 @@ def sql_bulk_insert(cursor, mappings, namespace, documents):
         for key in keys:
             if key in mapped_document:
                 val = get_transformed_value(
-                    mapped_fields[key],
+                    mapped_fields.get(key, {}),
                     mapped_document, key
                 )
                 document_values.append(to_sql_value(val))

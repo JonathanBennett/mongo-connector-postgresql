@@ -82,7 +82,7 @@ class TestPostgreSQL(TestCase):
         sql.sql_bulk_insert(cursor, mapping, 'db.col', [doc])
 
         cursor.execute.assert_called_with(
-            "INSERT INTO col (_creationDate,field1,field2_subfield,_id) VALUES (NULL,'val',NULL,'foo')"
+            "INSERT INTO col (_creationDate,_id,field1,field2_subfield) VALUES (NULL,'foo','val',NULL)"
         )
 
         doc = {
@@ -95,7 +95,7 @@ class TestPostgreSQL(TestCase):
 
         sql.sql_bulk_insert(cursor, mapping, 'db.col', [doc])
         cursor.execute.assert_called_with(
-            "INSERT INTO col (_creationDate,field1,field2_subfield,_id) VALUES (NULL,'val1','val2','foo')"
+            "INSERT INTO col (_creationDate,_id,field1,field2_subfield) VALUES (NULL,'foo','val1','val2')"
         )
 
     def test_sql_bulk_insert_array(self):
@@ -164,8 +164,8 @@ class TestPostgreSQL(TestCase):
         sql.sql_bulk_insert(cursor, mapping, 'db.col1', [doc, {'_id': 2}])
 
         cursor.execute.assert_has_calls([
-            call('INSERT INTO col_array (_creationDate,_id,field1,id_col1) VALUES (NULL,1,\'val\',\'1_0\')'),
-            call('INSERT INTO col_scalar (_creationDate,_id,id_col1,scalar) VALUES (NULL,1,\'1_0\',1),(NULL,1,\'1_1\',2),(NULL,1,\'1_2\',3)'),
+            call('INSERT INTO col_array (_creationDate,_id,field1,id_col1) VALUES (NULL,\'1_0\',\'val\',1)'),
+            call('INSERT INTO col_scalar (_creationDate,_id,id_col1,scalar) VALUES (NULL,\'1_0\',1,1),(NULL,\'1_1\',1,2),(NULL,\'1_2\',1,3)'),
             call('INSERT INTO col1 (_creationDate,_id) VALUES (NULL,1),(NULL,2)')
         ])
 
