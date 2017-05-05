@@ -174,6 +174,7 @@ class TestManagerInitialization(TestPostgreSQLManager):
         docmgr = postgresql_manager.DocManager('url', mongoUrl='murl')
 
         self.psql_module.connect.assert_called_with('url')
+        pconn.set_session.assert_called_with(deferrable=True)
         self.mongoclient.assert_called_with('murl')
         self.ospath.isfile.assert_called_with('mappings.json')
 
@@ -182,6 +183,7 @@ class TestManagerInitialization(TestPostgreSQLManager):
             MAPPING
         )
 
+        print(cursor.execute.mock_calls)
         cursor.execute.assert_has_calls([
             call('DROP TABLE col'),
             call(
@@ -195,6 +197,9 @@ class TestManagerInitialization(TestPostgreSQLManager):
             ),
             call(
                 'CREATE INDEX idx_col__creation_date ON col (_creationdate DESC)'
+            ),
+            call(
+                'ALTER TABLE col_field2 ADD CONSTRAINT col_field2_id_col_fk FOREIGN KEY (id_col) REFERENCES col(_id)'
             )
         ], any_order=True)
 

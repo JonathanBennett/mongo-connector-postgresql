@@ -51,6 +51,22 @@ class TestPostgreSQL(TestCase):
             'CREATE TABLE table  (field TEXT,id INTEGER) '
         )
 
+    def test_sql_add_foreign_keys(self):
+        cursor = MagicMock()
+        foreign_keys = [
+            {
+                'table': 'table',
+                'fk': 'reftable_id',
+                'ref': 'reftable',
+                'pk': 'id'
+            }
+        ]
+
+        sql.sql_add_foreign_keys(cursor, foreign_keys)
+        cursor.execute.assert_called_with(
+            'ALTER TABLE table ADD CONSTRAINT table_reftable_id_fk FOREIGN KEY (reftable_id) REFERENCES reftable(id)'
+        )
+
     def test_sql_bulk_insert(self):
         cursor = MagicMock()
 
