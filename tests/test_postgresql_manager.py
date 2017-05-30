@@ -183,7 +183,6 @@ class TestManagerInitialization(TestPostgreSQLManager):
             MAPPING
         )
 
-        print(cursor.execute.mock_calls)
         cursor.execute.assert_has_calls([
             call('DROP TABLE col'),
             call(

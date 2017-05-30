@@ -45,6 +45,7 @@ from mongo_connector.doc_managers.utils import (
 
 MAPPINGS_JSON_FILE_NAME = 'mappings.json'
 
+logging.basicConfig()
 LOG = logging.getLogger(__name__)
 
 
@@ -82,16 +83,17 @@ class DocManager(DocManagerBase):
         self.prepare_mappings()
 
         for database in self.mappings:
-            for collection in self.mappings[database]:
-                self.insert_accumulator[collection] = 0
+            foreign_keys = []
 
-                with self.pgsql.cursor() as cursor:
+            with self.pgsql.cursor() as cursor:
+                for collection in self.mappings[database]:
+                    self.insert_accumulator[collection] = 0
+
                     pk_found = False
                     pk_name = self.mappings[database][collection]['pk']
                     columns = ['_creationdate TIMESTAMP']
                     indices = [u"INDEX idx_{0}__creation_date ON {0} (_creationdate DESC)".format(collection)] + \
                               self.mappings[database][collection].get('indices', [])
-                    foreign_keys = []
 
                     for column in self.mappings[database][collection]:
                         column_mapping = self.mappings[database][collection][column]
@@ -126,12 +128,12 @@ class DocManager(DocManagerBase):
                         sql_drop_table(cursor, collection)
 
                     sql_create_table(cursor, collection, columns)
-                    sql_add_foreign_keys(cursor, foreign_keys)
 
                     for index in indices:
                         cursor.execute("CREATE " + index)
 
-                    self.commit()
+                sql_add_foreign_keys(cursor, foreign_keys)
+                self.commit()
 
     def stop(self):
         pass

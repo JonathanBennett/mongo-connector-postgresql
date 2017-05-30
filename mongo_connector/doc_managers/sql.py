@@ -9,9 +9,21 @@ from future.utils import iteritems
 from past.builtins import long, basestring
 from psycopg2._psycopg import AsIs
 
-from mongo_connector.doc_managers.mappings import get_mapped_document
-from mongo_connector.doc_managers.utils import extract_creation_date, get_array_fields, db_and_collection, \
-    get_array_of_scalar_fields, ARRAY_OF_SCALARS_TYPE, ARRAY_TYPE, get_nested_field_from_document
+from mongo_connector.doc_managers.mappings import (
+    get_mapped_document,
+    get_transformed_value,
+    get_transformed_document
+)
+
+from mongo_connector.doc_managers.utils import (
+    extract_creation_date,
+    get_array_fields,
+    db_and_collection,
+    get_array_of_scalar_fields,
+    ARRAY_OF_SCALARS_TYPE,
+    ARRAY_TYPE,
+    get_nested_field_from_document
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -43,7 +55,7 @@ def sql_delete_rows_where(cursor, table, where_clause):
 
 
 def sql_drop_table(cursor, tableName):
-    sql = u"DROP TABLE {0}".format(tableName.lower())
+    sql = u"DROP TABLE IF EXISTS {0} CASCADE".format(tableName.lower())
     cursor.execute(sql)
 
 
@@ -54,16 +66,19 @@ def sql_create_table(cursor, tableName, columns):
 
 
 def sql_add_foreign_keys(cursor, foreign_keys):
-    fmt = 'ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {}({})'
+    fmt = 'ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {}({}) DEFERRABLE INITIALLY DEFERRED'
 
     for foreign_key in foreign_keys:
-        cursor.execute(fmt.format(
+        print(foreign_key)
+        cmd = fmt.format(
             foreign_key['table'],
             '{0}_{1}_fk'.format(foreign_key['table'], foreign_key['fk']),
             foreign_key['fk'],
             foreign_key['ref'],
             foreign_key['pk']
-        ))
+        )
+        print(cmd)
+        cursor.execute(cmd)
 
 
 def sql_bulk_insert(cursor, mappings, namespace, documents):

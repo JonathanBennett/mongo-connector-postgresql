@@ -2,7 +2,17 @@
 from future.utils import iteritems
 from mongo_connector.doc_managers.formatters import DocumentFlattener
 
-from mongo_connector.doc_managers.utils import db_and_collection, ARRAY_OF_SCALARS_TYPE
+from mongo_connector.doc_managers.utils import (
+    db_and_collection,
+    ARRAY_OF_SCALARS_TYPE,
+    ARRAY_TYPE
+)
+
+from importlib import import_module
+import logging
+
+
+LOG = logging.getLogger(__name__)
 
 _formatter = DocumentFlattener()
 
