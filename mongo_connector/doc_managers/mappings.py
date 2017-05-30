@@ -12,6 +12,7 @@ from importlib import import_module
 import logging
 
 
+logging.basicConfig()
 LOG = logging.getLogger(__name__)
 
 _formatter = DocumentFlattener()

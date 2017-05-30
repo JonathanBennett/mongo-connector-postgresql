@@ -183,7 +183,6 @@ class TestManagerInitialization(TestPostgreSQLManager):
             MAPPING
         )
 
-        print(cursor.execute.mock_calls)
         cursor.execute.assert_has_calls([
             call('DROP TABLE col'),
             call(
@@ -334,7 +333,6 @@ class TestManager(TestPostgreSQLManager):
         self.mdb.__getitem__.assert_called_with('col')
         self.mcol.find_one.assert_called_with({'_id': 1})
 
-        print(self.cursor.execute.mock_calls)
         self.cursor.execute.assert_has_calls([
             call(
                 'DELETE FROM col_field2 WHERE _id LIKE \'1\\_%\''
