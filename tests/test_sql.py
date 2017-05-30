@@ -48,7 +48,23 @@ class TestPostgreSQL(TestCase):
         ]
         sql.sql_create_table(cursor, 'table', columns)
         cursor.execute.assert_called_with(
-            'CREATE TABLE table  (id INTEGER,field TEXT) '
+            'CREATE TABLE table  (field TEXT,id INTEGER) '
+        )
+
+    def test_sql_add_foreign_keys(self):
+        cursor = MagicMock()
+        foreign_keys = [
+            {
+                'table': 'table',
+                'fk': 'reftable_id',
+                'ref': 'reftable',
+                'pk': 'id'
+            }
+        ]
+
+        sql.sql_add_foreign_keys(cursor, foreign_keys)
+        cursor.execute.assert_called_with(
+            'ALTER TABLE table ADD CONSTRAINT table_reftable_id_fk FOREIGN KEY (reftable_id) REFERENCES reftable(id)'
         )
 
     def test_sql_bulk_insert(self):
@@ -80,8 +96,9 @@ class TestPostgreSQL(TestCase):
         }
 
         sql.sql_bulk_insert(cursor, mapping, 'db.col', [doc])
+
         cursor.execute.assert_called_with(
-            "INSERT INTO col (_creationDate,field1,field2_subfield,_id) VALUES (NULL,'val',NULL,'foo')"
+            "INSERT INTO col (_creationDate,_id,field1,field2_subfield) VALUES (NULL,'foo','val',NULL)"
         )
 
         doc = {
@@ -94,7 +111,7 @@ class TestPostgreSQL(TestCase):
 
         sql.sql_bulk_insert(cursor, mapping, 'db.col', [doc])
         cursor.execute.assert_called_with(
-            "INSERT INTO col (_creationDate,field1,field2_subfield,_id) VALUES (NULL,'val1','val2','foo')"
+            "INSERT INTO col (_creationDate,_id,field1,field2_subfield) VALUES (NULL,'foo','val1','val2')"
         )
 
     def test_sql_bulk_insert_array(self):
@@ -163,12 +180,27 @@ class TestPostgreSQL(TestCase):
         sql.sql_bulk_insert(cursor, mapping, 'db.col1', [doc, {'_id': 2}])
 
         cursor.execute.assert_has_calls([
-            call('INSERT INTO col_array (_creationDate,id_col1,_id,field1) VALUES (NULL,1,\'1_0\',\'val\')'),
-            call('INSERT INTO col_scalar (_creationDate,scalar,_id,id_col1) VALUES (NULL,1,\'1_0\',1),(NULL,2,\'1_1\',1),(NULL,3,\'1_2\',1)'),
+            call('INSERT INTO col_array (_creationDate,_id,field1,id_col1) VALUES (NULL,\'1_0\',\'val\',1)'),
+            call('INSERT INTO col_scalar (_creationDate,_id,id_col1,scalar) VALUES (NULL,\'1_0\',1,1),(NULL,\'1_1\',1,2),(NULL,\'1_2\',1,3)'),
             call('INSERT INTO col1 (_creationDate,_id) VALUES (NULL,1),(NULL,2)')
         ])
 
     def test_sql_insert(self):
+        mapping = {
+            'db': {
+                'col': {
+                    'pk': '_id',
+                    '_id': {
+                        'type': 'INT',
+                        'dest': '_id'
+                    },
+                    'field': {
+                        'type': 'TEXT',
+                        'dest': 'field'
+                    }
+                }
+            }
+        }
         cursor = MagicMock()
         now = datetime.now()
 
@@ -177,12 +209,12 @@ class TestPostgreSQL(TestCase):
         doc['_id'] = ObjectId.from_datetime(now)
         doc['field'] = 'val'
 
-        sql.sql_insert(cursor, 'table', doc, '_id')
+        sql.sql_insert(cursor, 'table', doc, mapping, 'db', 'col')
 
         doc['_creationDate'] = utils.extract_creation_date(doc, '_id')
 
         cursor.execute.assert_called_with(
-            'INSERT INTO table  (_id,field,_creationDate)  VALUES  (%(_id)s,%(field)s,%(_creationDate)s)  ON CONFLICT (_id) DO UPDATE SET  (_id,field,_creationDate)  =  (%(_id)s,%(field)s,%(_creationDate)s) ',
+            'INSERT INTO table  (_creationDate,_id,field)  VALUES  (%(_creationDate)s,%(_id)s,%(field)s)  ON CONFLICT (_id) DO UPDATE SET  (_creationDate,_id,field)  =  (%(_creationDate)s,%(_id)s,%(field)s) ',
             doc
         )
 
@@ -190,7 +222,7 @@ class TestPostgreSQL(TestCase):
             'field': 'val'
         }
 
-        sql.sql_insert(cursor, 'table', doc, '_id')
+        sql.sql_insert(cursor, 'table', doc, mapping, 'db', 'col')
 
         cursor.execute.assert_called_with(
             'INSERT INTO table  (field)  VALUES  (%(field)s) ',

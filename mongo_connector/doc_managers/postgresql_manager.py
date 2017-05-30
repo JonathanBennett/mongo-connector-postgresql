@@ -13,12 +13,35 @@ from mongo_connector.errors import InvalidConfiguration
 from psycopg2.extensions import register_adapter
 from pymongo import MongoClient
 
-from mongo_connector.doc_managers.mappings import is_mapped, get_mapped_document, get_primary_key, \
+from mongo_connector.doc_managers.mappings import (
+    is_mapped,
+    get_mapped_document,
+    get_primary_key,
     get_scalar_array_fields
-from mongo_connector.doc_managers.sql import sql_table_exists, sql_create_table, sql_insert, sql_delete_rows, \
-    sql_bulk_insert, object_id_adapter, sql_delete_rows_where, to_sql_value, sql_drop_table
-from mongo_connector.doc_managers.utils import get_array_fields, db_and_collection, get_any_array_fields, \
-    ARRAY_OF_SCALARS_TYPE, ARRAY_TYPE, get_nested_field_from_document
+)
+
+from mongo_connector.doc_managers.sql import (
+    sql_table_exists,
+    sql_create_table,
+    sql_insert,
+    sql_delete_rows,
+    sql_bulk_insert,
+    object_id_adapter,
+    sql_delete_rows_where,
+    to_sql_value,
+    sql_drop_table,
+    sql_add_foreign_keys
+)
+
+from mongo_connector.doc_managers.utils import (
+    get_array_fields,
+    db_and_collection,
+    get_any_array_fields,
+    ARRAY_OF_SCALARS_TYPE,
+    ARRAY_TYPE,
+    get_nested_field_from_document
+)
+
 
 MAPPINGS_JSON_FILE_NAME = 'mappings.json'
 
@@ -52,6 +75,7 @@ class DocManager(DocManagerBase):
         with open(MAPPINGS_JSON_FILE_NAME) as mappings_file:
             self.mappings = json.load(mappings_file)
 
+        self.pgsql.set_session(deferrable=True)
         self._init_schema()
 
     def _init_schema(self):
@@ -67,6 +91,7 @@ class DocManager(DocManagerBase):
                     columns = ['_creationdate TIMESTAMP']
                     indices = [u"INDEX idx_{0}__creation_date ON {0} (_creationdate DESC)".format(collection)] + \
                               self.mappings[database][collection].get('indices', [])
+                    foreign_keys = []
 
                     for column in self.mappings[database][collection]:
                         column_mapping = self.mappings[database][collection][column]
@@ -86,6 +111,14 @@ class DocManager(DocManagerBase):
                             if 'index' in column_mapping:
                                 indices.append(u"INDEX idx_{2}_{0} ON {1} ({0})".format(name, collection, collection.replace('.', '_')))
 
+                        if 'fk' in column_mapping:
+                            foreign_keys.append({
+                                'table': column_mapping['dest'],
+                                'ref': collection,
+                                'fk': column_mapping['fk'],
+                                'pk': pk_name
+                            })
+
                     if not pk_found:
                         constraints = "CONSTRAINT {0}_PK PRIMARY KEY".format(collection.upper())
                         columns.append(pk_name + ' TEXT ' + constraints)
@@ -94,6 +127,7 @@ class DocManager(DocManagerBase):
                         sql_drop_table(cursor, collection)
 
                     sql_create_table(cursor, collection, columns)
+                    sql_add_foreign_keys(cursor, foreign_keys)
 
                     for index in indices:
                         cursor.execute("CREATE " + index)
@@ -120,7 +154,13 @@ class DocManager(DocManagerBase):
         mapped_document = get_mapped_document(self.mappings, document, namespace)
 
         if mapped_document:
-            sql_insert(cursor, collection, mapped_document, self.mappings[db][collection]['pk'])
+            sql_insert(
+                cursor,
+                collection,
+                mapped_document,
+                self.mappings,
+                db, collection
+            )
 
             self._upsert_array_fields(collection, cursor, db, document, mapped_document, namespace, timestamp)
             self.upsert_scalar_array_fields(collection, cursor, db, document, mapped_document, namespace, timestamp)
