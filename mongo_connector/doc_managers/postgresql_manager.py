@@ -17,7 +17,8 @@ from mongo_connector.doc_managers.mappings import (
     is_mapped,
     get_mapped_document,
     get_primary_key,
-    get_scalar_array_fields
+    get_scalar_array_fields,
+    validate_mapping
 )
 
 from mongo_connector.doc_managers.sql import (
@@ -76,6 +77,7 @@ class DocManager(DocManagerBase):
             self.mappings = json.load(mappings_file)
 
         self.pgsql.set_session(deferrable=True)
+        validate_mapping(self.mappings)
         self._init_schema()
 
     def _init_schema(self):
