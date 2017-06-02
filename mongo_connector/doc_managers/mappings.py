@@ -14,6 +14,7 @@ from mongo_connector.doc_managers.mapping_schema import MAPPING_SCHEMA
 from mongo_connector.errors import InvalidConfiguration
 
 
+logging.basicConfig()
 LOG = logging.getLogger(__name__)
 
 _formatter = DocumentFlattener()
