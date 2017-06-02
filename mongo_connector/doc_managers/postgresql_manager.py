@@ -20,7 +20,7 @@ from mongo_connector.doc_managers.sql import sql_table_exists, sql_create_table,
 from mongo_connector.doc_managers.utils import get_array_fields, db_and_collection, get_any_array_fields, \
     ARRAY_OF_SCALARS_TYPE, ARRAY_TYPE, get_nested_field_from_document
 
-MAPPINGS_JSON_FILE_NAME = 'mappings.json'
+DEFAULT_MAPPINGS_JSON_FILE_NAME = 'mappings.json'
 
 LOG = logging.getLogger(__name__)
 
@@ -44,12 +44,13 @@ class DocManager(DocManagerBase):
         self.insert_accumulator = {}
         self.client = MongoClient(kwargs['mongoUrl'])
 
+        mappings_json_file_name = kwargs.get('mappingFile', DEFAULT_MAPPINGS_JSON_FILE_NAME)
         register_adapter(ObjectId, object_id_adapter)
 
-        if not os.path.isfile(MAPPINGS_JSON_FILE_NAME):
-            raise InvalidConfiguration("no mapping file found")
+        if not os.path.isfile(mappings_json_file_name):
+            raise InvalidConfiguration("no mapping file found at " + mappings_json_file_name)
 
-        with open(MAPPINGS_JSON_FILE_NAME) as mappings_file:
+        with open(mappings_json_file_name) as mappings_file:
             self.mappings = json.load(mappings_file)
 
         self._init_schema()
