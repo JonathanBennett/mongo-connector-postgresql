@@ -71,7 +71,7 @@ class DocManager(DocManagerBase):
         register_adapter(ObjectId, object_id_adapter)
 
         if not os.path.isfile(mappings_json_file_name):
-            raise InvalidConfiguration("no mapping file found at " + mappings_json_file_name)
+            raise InvalidConfiguration("no mapping file found at {}".format(mappings_json_file_name))
 
         with open(mappings_json_file_name) as mappings_file:
             self.mappings = json.load(mappings_file)
