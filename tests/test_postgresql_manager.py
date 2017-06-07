@@ -203,9 +203,6 @@ class TestManagerInitialization(TestPostgreSQLManager):
             ),
             call(
                 'CREATE INDEX idx_col__creation_date ON col (_creationdate DESC)'
-            ),
-            call(
-                'ALTER TABLE col_field2 ADD CONSTRAINT col_field2_id_col_fk FOREIGN KEY (id_col) REFERENCES col(_id)'
             )
         ], any_order=True)
 

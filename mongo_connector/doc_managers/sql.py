@@ -57,7 +57,7 @@ def sql_delete_rows_where(cursor, table, where_clause):
 
 
 def sql_drop_table(cursor, tableName):
-    sql = u"DROP TABLE IF EXISTS {0} CASCADE".format(tableName.lower())
+    sql = u"DROP TABLE {0}".format(tableName.lower())
     cursor.execute(sql)
 
 
@@ -65,22 +65,6 @@ def sql_create_table(cursor, tableName, columns):
     columns.sort()
     sql = u"CREATE TABLE {0} {1}".format(tableName.lower(), to_sql_list(columns))
     cursor.execute(sql)
-
-
-def sql_add_foreign_keys(cursor, foreign_keys):
-    fmt = 'ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {}({}) DEFERRABLE INITIALLY DEFERRED'
-
-    for foreign_key in foreign_keys:
-        print(foreign_key)
-        cmd = fmt.format(
-            foreign_key['table'],
-            '{0}_{1}_fk'.format(foreign_key['table'], foreign_key['fk']),
-            foreign_key['fk'],
-            foreign_key['ref'],
-            foreign_key['pk']
-        )
-        print(cmd)
-        cursor.execute(cmd)
 
 
 def sql_bulk_insert(cursor, mappings, namespace, documents):

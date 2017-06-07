@@ -30,8 +30,7 @@ from mongo_connector.doc_managers.sql import (
     object_id_adapter,
     sql_delete_rows_where,
     to_sql_value,
-    sql_drop_table,
-    sql_add_foreign_keys
+    sql_drop_table
 )
 
 from mongo_connector.doc_managers.utils import (
@@ -86,8 +85,6 @@ class DocManager(DocManagerBase):
         self.prepare_mappings()
 
         for database in self.mappings:
-            foreign_keys = []
-
             with self.pgsql.cursor() as cursor:
                 for collection in self.mappings[database]:
                     self.insert_accumulator[collection] = 0
@@ -116,14 +113,6 @@ class DocManager(DocManagerBase):
                             if 'index' in column_mapping:
                                 indices.append(u"INDEX idx_{2}_{0} ON {1} ({0})".format(name, collection, collection.replace('.', '_')))
 
-                        if 'fk' in column_mapping:
-                            foreign_keys.append({
-                                'table': column_mapping['dest'],
-                                'ref': collection,
-                                'fk': column_mapping['fk'],
-                                'pk': pk_name
-                            })
-
                     if not pk_found:
                         constraints = "CONSTRAINT {0}_PK PRIMARY KEY".format(collection.upper())
                         columns.append(pk_name + ' TEXT ' + constraints)
@@ -136,7 +125,6 @@ class DocManager(DocManagerBase):
                     for index in indices:
                         cursor.execute("CREATE " + index)
 
-                sql_add_foreign_keys(cursor, foreign_keys)
                 self.commit()
 
     def stop(self):
