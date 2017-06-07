@@ -25,7 +25,7 @@ from mongo_connector.doc_managers.utils import (
     get_nested_field_from_document
 )
 
-logging.basicConfig()
+
 LOG = logging.getLogger(__name__)
 
 
