@@ -248,12 +248,14 @@ def validate_mapping(mappings):
                             # Check for foreign key and linked table's primary key types
                             if fk['type'] != pk['type']:
                                 raise InvalidConfiguration(
-                                    "Foreign key {0}.{1}.{2} type mismatch with primary key {0}.{3}.{4}".format(
-                                        database,
-                                        dest,
-                                        field['fk'],
-                                        collection,
-                                        mapping['pk']
+                                    "Foreign key {db}.{dest}.{fk} type '{fk_type}' mismatch with primary key {db}.{col}.{pk} type '{pk_type}'".format(
+                                        db=database,
+                                        dest=dest,
+                                        fk=field['fk'],
+                                        fk_type=fk['type'],
+                                        col=collection,
+                                        pk=mapping['pk'],
+                                        pk_type=pk['type'],
                                     )
                                 )
 
