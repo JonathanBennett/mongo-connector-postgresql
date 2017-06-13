@@ -126,7 +126,7 @@ class DocManager(DocManagerBase):
 
                     if not pk_found:
                         constraints = "CONSTRAINT {0}_PK PRIMARY KEY".format(collection.upper())
-                        columns.append(pk_name + ' TEXT ' + constraints)
+                        columns.append(pk_name + ' SERIAL ' + constraints)
 
                     if sql_table_exists(cursor, collection):
                         sql_drop_table(cursor, collection)
