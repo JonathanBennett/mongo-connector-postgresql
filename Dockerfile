@@ -10,5 +10,5 @@ RUN mkdir -p /data/db
 COPY requirements.txt /tmp/
 RUN pip install --requirement /tmp/requirements.txt
 COPY . /tmp/
-RUN python /tmp/setup.py install
+RUN pip install /tmp/
 
