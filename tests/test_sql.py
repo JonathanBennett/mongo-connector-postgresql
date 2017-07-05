@@ -187,50 +187,6 @@ class TestPostgreSQL(TestCase):
             call('INSERT INTO col1 (_creationDate,_id) VALUES (NULL,DEFAULT) RETURNING _id AS col1__id')
         ])
 
-    def test_sql_insert(self):
-        mapping = {
-            'db': {
-                'col': {
-                    'pk': '_id',
-                    '_id': {
-                        'type': 'INT',
-                        'dest': '_id'
-                    },
-                    'field': {
-                        'type': 'TEXT',
-                        'dest': 'field'
-                    }
-                }
-            }
-        }
-        cursor = MagicMock()
-        now = datetime.now()
-
-        # Use ordereddict to ensure correct order in generated SQL request
-        doc = OrderedDict()
-        doc['_id'] = ObjectId.from_datetime(now)
-        doc['field'] = 'val'
-
-        sql.sql_insert(cursor, 'table', doc, mapping, 'db', 'col')
-
-        doc['_creationDate'] = utils.extract_creation_date(doc, '_id')
-
-        cursor.execute.assert_called_with(
-            'INSERT INTO table  (_creationDate,_id,field)  VALUES  (%(_creationDate)s,%(_id)s,%(field)s)  ON CONFLICT (_id) DO UPDATE SET  (_creationDate,_id,field)  =  (%(_creationDate)s,%(_id)s,%(field)s) ',
-            doc
-        )
-
-        doc = {
-            'field': 'val'
-        }
-
-        sql.sql_insert(cursor, 'table', doc, mapping, 'db', 'col')
-
-        cursor.execute.assert_called_with(
-            'INSERT INTO table  (field)  VALUES  (%(field)s) ',
-            doc
-        )
-
 
 if __name__ == '__main__':
     main()
