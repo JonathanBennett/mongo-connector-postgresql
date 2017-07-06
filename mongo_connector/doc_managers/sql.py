@@ -4,6 +4,7 @@ import logging
 import unicodedata
 
 import re
+import traceback
 from builtins import chr
 from future.utils import iteritems
 from past.builtins import long, basestring
@@ -158,9 +159,7 @@ def get_document_keys(document):
     return keys
 
 
-def sql_insert(cursor, tableName, document, mappings, db, collection):
-    primary_key = mappings[db][collection]['pk']
-
+def sql_insert(cursor, db, collection, document, primary_key, quiet=False):
     creationDate = extract_creation_date(document, primary_key)
     if creationDate is not None:
         document['_creationDate'] = creationDate
@@ -170,14 +169,14 @@ def sql_insert(cursor, tableName, document, mappings, db, collection):
 
     if primary_key in document:
         sql = u"INSERT INTO {0} {1} VALUES {2} ON CONFLICT ({3}) DO UPDATE SET {1} = {2}".format(
-            tableName,
+            collection,
             to_sql_list(keys),
             to_sql_list(valuesPlaceholder),
             primary_key
         )
     else:
         sql = u"INSERT INTO {0} {1} VALUES {2}".format(
-            tableName,
+            collection,
             to_sql_list(keys),
             to_sql_list(valuesPlaceholder),
             primary_key
@@ -188,8 +187,12 @@ def sql_insert(cursor, tableName, document, mappings, db, collection):
             sql,
             get_transformed_document(mappings, db, collection, document)
         )
-    except Exception as e:
-        LOG.error(u"Impossible to upsert the following document %s : %s", document, e)
+
+    except psycopg2.Error:
+        LOG.error(u"Impossible to upsert the following document %s", document)
+
+        if not quiet:
+            LOG.error(u"Traceback:\n%s", traceback.format_exc())
 
 
 def remove_control_chars(s):
