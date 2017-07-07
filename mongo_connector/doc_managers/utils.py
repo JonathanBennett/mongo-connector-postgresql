@@ -2,15 +2,12 @@
 
 from bson.objectid import ObjectId
 from future.utils import iteritems
+import logging
 
 
+LOG = logging.getLogger(__name__)
 ARRAY_TYPE = u'_ARRAY'
 ARRAY_OF_SCALARS_TYPE = u'_ARRAY_OF_SCALARS'
-
-
-class Atom(str):
-    def __str__(self):
-        return self
 
 
 def extract_creation_date(document, primary_key):
@@ -20,7 +17,7 @@ def extract_creation_date(document, primary_key):
         if ObjectId.is_valid(objectId):
             return ObjectId(objectId).generation_time
 
-    return Atom('NULL::timestamp')
+    return None
 
 
 def is_collection_mapped(d, keys):
