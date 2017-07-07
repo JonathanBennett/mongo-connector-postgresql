@@ -87,7 +87,7 @@ def sql_add_foreign_keys(cursor, foreign_keys):
         cursor.execute(cmd)
 
 
-def sql_bulk_insert(cursor, mappings, namespace, documents):
+def sql_bulk_insert(cursor, mappings, namespace, documents, quiet=False):
     queries = []
     _sql_bulk_insert(queries, mappings, namespace, documents)
 
@@ -193,7 +193,8 @@ def sql_bulk_insert(cursor, mappings, namespace, documents):
                 sql
             )
 
-            LOG.error(u"Traceback:\n%s", traceback.format_exc())
+            if not quiet:
+                LOG.error(u"Traceback:\n%s", traceback.format_exc())
 
 
 def _sql_bulk_insert(query, mappings, namespace, documents):

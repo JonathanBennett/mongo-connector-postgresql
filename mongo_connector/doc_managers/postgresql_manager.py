@@ -172,7 +172,8 @@ class DocManager(DocManagerBase):
             cursor,
             self.mappings,
             namespace,
-            [document]
+            [document],
+            quiet=self.quiet
         )
         self.commit()
 
@@ -229,7 +230,8 @@ class DocManager(DocManagerBase):
                         cursor,
                         self.mappings,
                         namespace,
-                        document_buffer
+                        document_buffer,
+                        quiet=self.quiet
                     )
 
                     self.commit()
@@ -241,7 +243,8 @@ class DocManager(DocManagerBase):
                 cursor,
                 self.mappings,
                 namespace,
-                document_buffer
+                document_buffer,
+                quiet=self.quiet
             )
             self.commit()
 
