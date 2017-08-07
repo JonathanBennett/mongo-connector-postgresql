@@ -6,6 +6,7 @@ from time import time
 import json
 
 from mongo_connector.doc_managers import postgresql_manager
+from .fixtures import *
 
 
 MAPPING_RAW = '''{
@@ -27,7 +28,7 @@ MAPPING_RAW = '''{
         "col_field2": {
             "pk": "_id",
             "_id": {
-                "type": "TEXT"
+                "type": "SERIAL"
             },
             "id_col": {
                 "type": "INT"
@@ -45,10 +46,10 @@ MAPPING_RAW = '''{
         "col_field2_subfield2": {
             "pk": "_id",
             "_id": {
-                "type": "TEXT"
+                "type": "SERIAL"
             },
             "id_col_field2": {
-                "type": "TEXT"
+                "type": "SERIAL"
             },
             "scalar": {
                 "type": "INT"
@@ -79,7 +80,7 @@ MAPPING = {
             'pk': '_id',
             '_id': {
                 'dest': '_id',
-                'type': 'TEXT'
+                'type': 'SERIAL'
             },
             'id_col': {
                 'dest': 'id_col',
@@ -100,11 +101,11 @@ MAPPING = {
             'pk': '_id',
             '_id': {
                 'dest': '_id',
-                'type': 'TEXT'
+                'type': 'SERIAL'
             },
             'id_col_field2': {
                 'dest': 'id_col_field2',
-                'type': 'TEXT'
+                'type': 'SERIAL'
             },
             'scalar': {
                 'dest': 'scalar',
@@ -131,9 +132,6 @@ class TestPostgreSQLManager(TestCase):
         self.ospath_patcher = patch(
             'mongo_connector.doc_managers.postgresql_manager.os.path'
         )
-        self.logging_patcher = patch(
-            'mongo_connector.doc_managers.postgresql_manager.logging'
-        )
         self.validate_mapping_patcher = patch(
             'mongo_connector.doc_managers.postgresql_manager.validate_mapping'
         )
@@ -142,7 +140,6 @@ class TestPostgreSQLManager(TestCase):
         self.mongoclient = self.mongoclient_patcher.start()
         self.builtin_open = self.builtin_open_patcher.start()
         self.ospath = self.ospath_patcher.start()
-        self.logging = self.logging_patcher.start()
         self.validate_mapping = self.validate_mapping_patcher.start()
 
     def tearDown(self):
@@ -150,7 +147,6 @@ class TestPostgreSQLManager(TestCase):
         self.mongoclient_patcher.stop()
         self.builtin_open_patcher.stop()
         self.ospath_patcher.stop()
-        self.logging_patcher.stop()
         self.validate_mapping_patcher.stop()
 
 
@@ -197,10 +193,10 @@ class TestManagerInitialization(TestPostgreSQLManager):
                 'CREATE TABLE col  (_creationdate TIMESTAMP,_id INT CONSTRAINT COL_PK PRIMARY KEY,field1 TEXT ) '
             ),
             call(
-                'CREATE TABLE col_field2  (_creationdate TIMESTAMP,_id TEXT CONSTRAINT COL_FIELD2_PK PRIMARY KEY,id_col INT ,subfield1 TEXT ) '
+                'CREATE TABLE col_field2  (_creationdate TIMESTAMP,_id SERIAL CONSTRAINT COL_FIELD2_PK PRIMARY KEY,id_col INT ,subfield1 TEXT ) '
             ),
             call(
-                'CREATE TABLE col_field2_subfield2  (_creationdate TIMESTAMP,_id TEXT CONSTRAINT COL_FIELD2_SUBFIELD2_PK PRIMARY KEY,id_col_field2 TEXT ,scalar INT ) '
+                'CREATE TABLE col_field2_subfield2  (_creationdate TIMESTAMP,_id SERIAL CONSTRAINT COL_FIELD2_SUBFIELD2_PK PRIMARY KEY,id_col_field2 SERIAL ,scalar INT ) '
             ),
             call(
                 'CREATE INDEX idx_col__creation_date ON col (_creationdate DESC)'
@@ -265,16 +261,7 @@ class TestManager(TestPostgreSQLManager):
 
         self.docmgr.upsert(doc, 'db.col', now)
 
-        self.cursor.execute.assert_has_calls([
-            call(
-                'INSERT INTO col_field2  (id_col,subfield1)  VALUES  (%(id_col)s,%(subfield1)s) ',
-                {'id_col': 1, 'subfield1': 'subval1'}
-            ),
-            call(
-                'INSERT INTO col  (_id,field1)  VALUES  (%(_id)s,%(field1)s)  ON CONFLICT (_id) DO UPDATE SET  (_id,field1)  =  (%(_id)s,%(field1)s) ',
-                {'_id': 1, 'field1': 'val1'}
-            )
-        ], any_order=True)
+        self.cursor.execute.assert_called_with(TEST_PGMAN_UPSERT)
         self.pconn.commit.assert_called()
 
     def test_bulk_upsert(self):
@@ -304,24 +291,9 @@ class TestManager(TestPostgreSQLManager):
         self.docmgr.bulk_upsert([doc1, doc2, doc3], 'db.col', now)
 
         self.cursor.execute.assert_has_calls([
-            call(
-                "INSERT INTO col (_creationDate,_id,field1) VALUES (NULL,1,'val1') RETURNING _id AS col__id"
-            ),
-            call(
-                "INSERT INTO col_field2 (_creationDate,_id,id_col,subfield1) VALUES (NULL,DEFAULT,1,'subval1') RETURNING _id AS col_field2__id"
-            ),
-            call(
-                "INSERT INTO col (_creationDate,_id,field1) VALUES (NULL,2,'val2') RETURNING _id AS col__id"
-            ),
-            call(
-                "INSERT INTO col_field2 (_creationDate,_id,id_col,subfield1) VALUES (NULL,DEFAULT,2,'subval2') RETURNING _id AS col_field2__id"
-            ),
-            call(
-                "INSERT INTO col (_creationDate,_id,field1) VALUES (NULL,3,'val3') RETURNING _id AS col__id"
-            ),
-            call(
-                "INSERT INTO col_field2 (_creationDate,_id,id_col,subfield1) VALUES (NULL,DEFAULT,3,'subval3') RETURNING _id AS col_field2__id"
-            )
+            call(TEST_PGMAN_BULK_UPSERT_1),
+            call(TEST_PGMAN_BULK_UPSERT_2),
+            call(TEST_PGMAN_BULK_UPSERT_3)
         ], any_order=True)
         self.pconn.commit.assert_called()
 
@@ -346,16 +318,9 @@ class TestManager(TestPostgreSQLManager):
 
         self.cursor.execute.assert_has_calls([
             call(
-                'DELETE FROM col_field2 WHERE _id LIKE \'1\\_%\''
+                'DELETE FROM col WHERE _id = 1'
             ),
-            call(
-                'INSERT INTO col_field2  (id_col,subfield1)  VALUES  (%(id_col)s,%(subfield1)s) ',
-                {'id_col': 1, 'subfield1': 'subval1'}
-            ),
-            call(
-                'INSERT INTO col  (_id,field1)  VALUES  (%(_id)s,%(field1)s)  ON CONFLICT (_id) DO UPDATE SET  (_id,field1)  =  (%(_id)s,%(field1)s) ',
-                {'_id': 1, 'field1': 'val1'}
-            )
+            call(TEST_PGMAN_UPDATE)
         ], any_order=True)
         self.pconn.commit.assert_called()
 
@@ -363,10 +328,9 @@ class TestManager(TestPostgreSQLManager):
         now = time()
         self.docmgr.remove(1, 'db.col', now)
 
-        self.cursor.execute.assert_has_calls([
-            call('DELETE from col WHERE _id = \'1\';'),
-            call('DELETE FROM col_field2 WHERE _id LIKE \'1\\_%\'')
-        ], any_order=True)
+        self.cursor.execute.assert_called_with(
+            'DELETE from col WHERE _id = 1::INT;'
+        )
         self.pconn.commit.assert_called()
 
 

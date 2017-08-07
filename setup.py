@@ -15,9 +15,15 @@ setup(
             'mongo_connector >= 2.5.1',
             'psycopg2 >= 2.6.1',
             'future >= 0.16.0',
+            'RestrictedPython >= 4.0a3',
             'jsonschema >= 2.6.0'
         ],
-        tests_require=['mock>=2.0.0'],
+        tests_require=[
+            'mock>=2.0.0',
+            'aloe>=0.1.12',
+            'testing.postgresql>=1.3.0',
+            'mongo-orchestration>=0.6.9'
+        ],
         license="http://www.apache.org/licenses/LICENSE-2.0.html",
         url='https://github.com/Hopwork/mongo-connector-postgresql',
         packages=["mongo_connector", "mongo_connector.doc_managers"],
