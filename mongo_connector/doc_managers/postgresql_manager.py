@@ -116,13 +116,13 @@ class DocManager(DocManagerBase):
                                 if 'index' in column_mapping:
                                     indices.append(u"INDEX idx_{2}_{0} ON {1} ({0})".format(name, collection, collection.replace('.', '_')))
 
-                        if 'fk' in column_mapping:
-                            foreign_keys.append({
-                                'table': column_mapping['dest'],
-                                'ref': collection,
-                                'fk': column_mapping['fk'],
-                                'pk': pk_name
-                            })
+                            if 'fk' in column_mapping:
+                                foreign_keys.append({
+                                    'table': column_mapping['dest'],
+                                    'ref': collection,
+                                    'fk': column_mapping['fk'],
+                                    'pk': pk_name
+                                })
 
                         if not pk_found:
                             columns.append(pk_name + ' SERIAL CONSTRAINT ' + collection.upper() + '_PK PRIMARY KEY')
