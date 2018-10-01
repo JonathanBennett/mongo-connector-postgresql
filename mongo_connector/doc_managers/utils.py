@@ -67,7 +67,9 @@ def map_value_to_pgsql(value):
 
 
 def db_and_collection(namespace):
-    return namespace.split('.', 1)
+    db_collection_list = namespace.split('.', 1)
+    db_collection_list[1].replace("-","_")
+    return db_collection_list
 
 
 def get_array_field_collection(mappings, db, collection, field):
